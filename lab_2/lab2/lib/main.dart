@@ -2,136 +2,105 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 
 void main() {
-  runApp(CalculatorApp());
+  runApp(FuelCalculatorApp());
 }
 
-class CalculatorApp extends StatelessWidget {
+class FuelCalculatorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Fuel Emission Calculator',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: CalculatorScreen(),
+      home: FuelCalculatorScreen(),
     );
   }
 }
 
-class CalculatorScreen extends StatefulWidget {
+class FuelCalculatorScreen extends StatefulWidget {
   @override
-  _CalculatorScreenState createState() => _CalculatorScreenState();
+  _FuelCalculatorScreenState createState() => _FuelCalculatorScreenState();
 }
 
-class _CalculatorScreenState extends State<CalculatorScreen> {
-  final TextEditingController powerController = TextEditingController();
-  final TextEditingController sigma1Controller = TextEditingController();
-  final TextEditingController sigma2Controller = TextEditingController();
-  final TextEditingController costController = TextEditingController();
+class _FuelCalculatorScreenState extends State<FuelCalculatorScreen> {
+  final TextEditingController coalController = TextEditingController();
+  final TextEditingController masutController = TextEditingController();
+  final TextEditingController gasController = TextEditingController();
   
-  String Profit1 = "", Penalty1 = "", Loss1 = "", Profit2 = "", Penalty2 = "", Loss2 = "";
+  double gasDensity = 0.273;
+  String kCoal = "", eCoal = "", kMasut = "", eMasut = "", kGas = "", eGas = "";
   bool showResult = false;
 
-  List<dynamic> calculate(double power, double cost, double sigma) {
-    double delta = power * 0.05;
-    double b1 = power - delta;
-    double b2 = power + delta;
-    double step = 0.001;
+  void calculateResults() {
+    double bCoal = double.tryParse(coalController.text) ?? 0.0;
+    double bMasut = double.tryParse(masutController.text) ?? 0.0;
+    double bGas = (double.tryParse(gasController.text) ?? 0.0) * gasDensity;
 
-    double energyShare = 0.0;
-    for (double p = b1; p < b2; p += step) {
-      double pd = (1 / (sigma * sqrt(2 * pi))) * exp(-((p - power) * (p - power)) / (2 * sigma * sigma));
-      energyShare += pd * step;
-    }
-
-    double energyWithoutImbalance = (power * 24 * energyShare).roundToDouble();
-    double profit = energyWithoutImbalance * cost * 1000;
-    double energyWithImbalance = (power * 24 * (1 - energyShare)).roundToDouble();
-    double penalty = energyWithImbalance * cost * 1000;
-    double loss = profit - penalty;
+    double kCoalValue = pow(10, 6) / 20.47 * 0.8 * 25.2 / (100 - 1.5) * (1 - 0.985);
+    double eCoalValue = pow(10, -6) * kCoalValue * 20.47 * bCoal;
     
-    String choice = " (збиток)";
-    if (loss > 0) {
-      choice = " (прибуток)";
-    }
-
-    return [profit, penalty, loss, choice];
-  }
-
-  void showResults() {
-    double power = double.tryParse(powerController.text) ?? 0.0;
-    double cost = double.tryParse(costController.text) ?? 0.0;
-    double sigma1 = double.tryParse(sigma1Controller.text) ?? 0.0;
-    double sigma2 = double.tryParse(sigma2Controller.text) ?? 0.0;
-
-    List<dynamic> results1 = calculate(power, cost, sigma1);
-    List<dynamic> results2 = calculate(power, cost, sigma2);
+    double kMasutValue = pow(10, 6) / 39.48 * 1 * 0.15 / (100 - 0) * (1 - 0.985);
+    double eMasutValue = pow(10, -6) * kMasutValue * 39.48 * bMasut;
+    
+    double kGasValue = pow(10, 6) / 33.08 * 0 * 0 / (100 - 0) * (1 - 0.985);
+    double eGasValue = pow(10, -6) * kGasValue * 33.08 * bGas;
 
     setState(() {
-      Profit1 = "${results1[0].toStringAsFixed(2)} грн";
-      Penalty1 = "${results1[1].toStringAsFixed(2)} грн";
-      Loss1 = "${results1[2].toStringAsFixed(2)} грн ${results1[3]}";
-      Profit2 = "${results2[0].toStringAsFixed(2)} грн";
-      Penalty2 = "${results2[1].toStringAsFixed(2)} грн";
-      Loss2 = "${results2[2].toStringAsFixed(2)} грн ${results2[3]}";
+      kCoal = "${kCoalValue.toStringAsFixed(2)} г/ГДж";
+      eCoal = "${eCoalValue.toStringAsFixed(2)} т";
+      kMasut = "${kMasutValue.toStringAsFixed(2)} г/ГДж";
+      eMasut = "${eMasutValue.toStringAsFixed(2)} т";
+      kGas = "${kGasValue.toStringAsFixed(2)} г/ГДж";
+      eGas = "${eGasValue.toStringAsFixed(2)} т";
       showResult = true;
+    });
+  }
+
+  void resetForm() {
+    setState(() {
+      showResult = false;
+      coalController.clear();
+      masutController.clear();
+      gasController.clear();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Калькулятор')),
+      appBar: AppBar(title: Text('Fuel Emission Calculator')),
       body: Padding(
         padding: EdgeInsets.all(16.0),
         child: Column(
           children: [
           TextField(
-          controller: powerController,
+          controller: coalController,
           keyboardType: TextInputType.number,
-          decoration: InputDecoration(labelText: 'Середньодобова потужність'),
+          decoration: InputDecoration(labelText: 'Вугілля (BCoal)'),
         ),
         TextField(
-          controller: sigma1Controller,
+          controller: masutController,
           keyboardType: TextInputType.number,
-          decoration: InputDecoration(labelText: 'Початкове середньоквадратичне відхилення'),
+          decoration: InputDecoration(labelText: 'Мазут (BMasut)'),
         ),
         TextField(
-          controller: sigma2Controller,
+          controller: gasController,
           keyboardType: TextInputType.number,
-          decoration: InputDecoration(labelText: 'Середньоквадратичне відхилення після вдосконалення'),
-        ),
-        TextField(
-          controller: costController,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(labelText: 'Вартість електроенергії'),
+          decoration: InputDecoration(labelText: 'Газ (BGas)'),
         ),
         SizedBox(height: 20),
         ElevatedButton(
-          onPressed: showResults,
+          onPressed: calculateResults,
           child: Text('Розрахувати'),
         ),
 
         SizedBox(height: 20),
             if (showResult) ...[
-              Text(
-                'Початкове середньоквадратичне відхилення', 
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.left
-              ),
-              Text('Прибуток: $Profit1', textAlign: TextAlign.left),
-              Text('Штраф: $Penalty1', textAlign: TextAlign.left),
-              Text(Loss1, textAlign: TextAlign.left),
-              Text(
-                'Середньоквадратичне відхилення після вдосконалення', 
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.left
-              ),
-              Text('Прибуток: $Profit2', textAlign: TextAlign.left),
-              Text('Штраф: $Penalty2', textAlign: TextAlign.left),
-              Text(Loss2, textAlign: TextAlign.left),
+              Text('Коефіцієнт емісії вугілля: $kCoal'),
+        Text('Валовий викид вугілля: $eCoal'),
+        Text('Коефіцієнт емісії мазуту: $kMasut'),
+        Text('Валовий викид мазуту: $eMasut'),
+        Text('Коефіцієнт емісії газ: $kGas'),
+        Text('Валовий викид газ: $eGas'),
             ]
         ]
 
